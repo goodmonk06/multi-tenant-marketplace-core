@@ -15,6 +15,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole, ShopStatus } from '@prisma/client';
 import { Public } from '../auth/decorators/public.decorator';
+import { CreateShopDto } from './dto/create-shop.dto';
+import { UpdateShopDto } from './dto/update-shop.dto';
 
 @Controller('shops')
 export class ShopsController {
@@ -26,7 +28,7 @@ export class ShopsController {
   async create(
     @Request() req,
     @CurrentUser() user,
-    @Body() body: { name: string; description?: string },
+    @Body() body: CreateShopDto,
   ) {
     return this.shopsService.create(req.tenantId, user.userId, body);
   }
@@ -56,7 +58,7 @@ export class ShopsController {
     @Param('id') id: string,
     @Request() req,
     @CurrentUser() user,
-    @Body() body: { name?: string; description?: string; status?: ShopStatus },
+    @Body() body: UpdateShopDto,
   ) {
     return this.shopsService.update(id, req.tenantId, user.userId, body);
   }

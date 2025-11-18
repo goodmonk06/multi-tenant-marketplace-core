@@ -6,22 +6,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UserRole } from '@prisma/client';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  async register(
-    @Request() req,
-    @Body()
-    body: {
-      email: string;
-      password: string;
-      role?: UserRole;
-    },
-  ) {
+  async register(@Request() req, @Body() body: RegisterDto) {
     const tenantId = req.tenantId;
     return this.authService.register(
       tenantId,
@@ -32,10 +25,7 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(
-    @Request() req,
-    @Body() body: { email: string; password: string },
-  ) {
+  async login(@Request() req, @Body() body: LoginDto) {
     const tenantId = req.tenantId;
     const user = await this.authService.validateUser(
       tenantId,

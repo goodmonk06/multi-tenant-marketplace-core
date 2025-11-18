@@ -6,26 +6,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Listing, ListingStatus } from '@prisma/client';
 import { ShopsService } from '../shops/shops.service';
-
-export interface CreateListingDto {
-  shopId: string;
-  title: string;
-  description?: string;
-  price: number;
-  currency?: string;
-  stockQty?: number;
-  attributesJson?: any;
-}
-
-export interface UpdateListingDto {
-  title?: string;
-  description?: string;
-  price?: number;
-  currency?: string;
-  stockQty?: number;
-  status?: ListingStatus;
-  attributesJson?: any;
-}
+import { CreateListingDto } from './dto/create-listing.dto';
+import { UpdateListingDto } from './dto/update-listing.dto';
 
 @Injectable()
 export class ListingsService {

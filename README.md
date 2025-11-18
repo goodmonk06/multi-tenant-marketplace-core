@@ -6,6 +6,20 @@ A reusable, production-ready marketplace backend and frontend skeleton that supp
 - **Digital products** (e.g., courses, downloads)
 - **Flexible listings** (e.g., event seats, rental slots, subscription offers)
 
+**Status:** ✅ Phase 2 Complete - Production-ready vertical slice with full E2E functionality
+
+## Overview
+
+This is a fully-functional multi-tenant marketplace that can be deployed immediately or customized for specific use cases. The codebase includes:
+- Complete authentication and authorization with JWT
+- Multi-tenant data isolation and scoping
+- Full buyer flow: browse → cart → checkout → order tracking
+- Seller dashboard for managing shops and listings
+- Admin tools for marketplace management
+- Stripe payment integration
+- Comprehensive test coverage
+- Docker-ready deployment
+
 ## 🏗️ Architecture Overview
 
 ### High-Level Architecture
@@ -68,21 +82,52 @@ A reusable, production-ready marketplace backend and frontend skeleton that supp
 ### Prerequisites
 
 - Node.js 18+ and npm
-- PostgreSQL 14+
-- Redis 6+ (optional but recommended)
-- Stripe account (for payments)
+- Docker and Docker Compose (recommended)
+- PostgreSQL 14+ (if not using Docker)
+- Redis 6+ (optional, if not using Docker)
 
-### Installation
+### Quick Start with Docker (Recommended)
 
-1. **Clone the repository**
+1. **Clone and navigate to the repository**
 ```bash
 git clone <repository-url>
 cd multi-tenant-marketplace-core
 ```
 
-2. **Install dependencies**
+2. **Start all services**
+```bash
+# Start PostgreSQL, Redis, backend, and frontend
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+3. **Access the application**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001
+- Demo Marketplace: http://localhost:3000/demo-marketplace
+
+**Demo Credentials:**
+- Admin: `admin@demo.com` / `password123`
+- Seller: `seller1@demo.com` / `password123`
+- Buyer: `buyer@demo.com` / `password123`
+
+### Manual Setup (Development)
+
+If you prefer running services locally without Docker:
+
+1. **Install dependencies**
 ```bash
 npm install
+```
+
+2. **Start PostgreSQL and Redis**
+```bash
+# Option 1: Use Docker for databases only
+docker compose up -d postgres redis
+
+# Option 2: Install and start them locally
 ```
 
 3. **Set up the backend**
@@ -93,9 +138,7 @@ cd backend
 cp .env.example .env
 
 # Edit .env with your database credentials
-# DATABASE_URL="postgresql://user:password@localhost:5432/marketplace"
-# JWT_SECRET="your-secret-key"
-# STRIPE_SECRET_KEY="sk_test_..."
+# For Docker databases, the defaults work fine
 
 # Generate Prisma client
 npm run prisma:generate
@@ -110,12 +153,8 @@ npm run seed
 4. **Set up the frontend**
 ```bash
 cd ../frontend
-
-# Copy environment file
 cp .env.example .env
-
-# Edit .env if needed
-# NEXT_PUBLIC_API_URL=http://localhost:3001
+# Defaults work fine for local development
 ```
 
 5. **Run the development servers**
@@ -128,10 +167,10 @@ npm run dev
 Or run them separately:
 ```bash
 # Terminal 1 - Backend
-cd backend && npm run dev
+npm run dev:backend
 
 # Terminal 2 - Frontend
-cd frontend && npm run dev
+npm run dev:frontend
 ```
 
 6. **Access the application**
@@ -392,6 +431,48 @@ model Download {
 }
 ```
 
+## 📋 Available Scripts
+
+From the root directory:
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start both backend and frontend in development mode |
+| `npm run build` | Build both backend and frontend for production |
+| `npm run start` | Start both services in production mode |
+| `npm test` | Run backend tests |
+| `npm run lint` | Lint backend code |
+| `npm run db:migrate` | Run database migrations |
+| `npm run db:seed` | Seed database with demo data |
+| `npm run docker:up` | Start all services with Docker Compose |
+| `npm run docker:down` | Stop all Docker services |
+
+Individual workspace commands:
+- `npm run dev:backend` - Start backend only
+- `npm run dev:frontend` - Start frontend only
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:cov` - Run tests with coverage
+
+## 🧪 Testing
+
+The project includes comprehensive test coverage for core business logic:
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:cov
+```
+
+Test files are located alongside their source files with the `.spec.ts` extension:
+- `auth.service.spec.ts` - Authentication logic tests
+- `shops.service.spec.ts` - Shop management tests
+- `listings.service.spec.ts` - Listing and inventory tests
+
 ## 📁 Project Structure
 
 ```
@@ -402,16 +483,25 @@ multi-tenant-marketplace-core/
 │   │   └── seed.ts             # Demo data seed script
 │   ├── src/
 │   │   ├── auth/               # Authentication & JWT
+│   │   │   └── dto/            # Validation DTOs
 │   │   ├── cart/               # Shopping cart
+│   │   │   └── dto/            # Validation DTOs
+│   │   ├── common/             # Shared utilities
+│   │   │   └── filters/        # Exception filters
 │   │   ├── listings/           # Product listings
+│   │   │   └── dto/            # Validation DTOs
 │   │   ├── orders/             # Order management
+│   │   │   └── dto/            # Validation DTOs
 │   │   ├── payments/           # Stripe integration
 │   │   ├── prisma/             # Prisma service
 │   │   ├── shops/              # Shop management
+│   │   │   └── dto/            # Validation DTOs
 │   │   ├── tenant/             # Multi-tenant middleware
 │   │   ├── users/              # User management
 │   │   ├── app.module.ts       # Main app module
 │   │   └── main.ts             # Application entry
+│   ├── Dockerfile              # Production Docker image
+│   ├── jest.config.js          # Test configuration
 │   └── package.json
 ├── frontend/
 │   ├── src/
@@ -427,7 +517,9 @@ multi-tenant-marketplace-core/
 │   │   └── lib/
 │   │       ├── api.ts          # API client functions
 │   │       └── utils.ts        # Utility functions
+│   ├── Dockerfile              # Production Docker image
 │   └── package.json
+├── docker-compose.yml          # Full-stack orchestration
 └── package.json                # Root workspace config
 ```
 
