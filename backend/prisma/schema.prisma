@@ -17,10 +17,15 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  shops     Shop[]
-  listings  Listing[]
-  orders    Order[]
+  users        User[]
+  shops        Shop[]
+  listings     Listing[]
+  orders       Order[]
+  categories   Category[]
+  reviews      Review[]
+  favorites    Favorite[]
+  activityLogs ActivityLog[]
+  coupons      Coupon[]
 
   @@index([slug])
 }
@@ -41,9 +46,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ownedShops   Shop[]
   orders       Order[]
+  reviews      Review[]
+  favorites    Favorite[]
+  activityLogs ActivityLog[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -71,6 +79,7 @@ model Shop {
   owner       User       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   listings    Listing[]
   payouts     Payout[]
+  stats       ShopStats?
 
   @@index([tenantId])
   @@index([ownerUserId])
@@ -98,9 +107,12 @@ model Listing {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  shop           Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shop           Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
   orderItems     OrderItem[]
+  categories     ListingCategory[]
+  reviews        Review[]
+  favorites      Favorite[]
 
   @@index([tenantId])
   @@index([shopId])
@@ -134,6 +146,7 @@ model Order {
   tenant            Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   buyer             User        @relation(fields: [buyerId], references: [id], onDelete: Cascade)
   items             OrderItem[]
+  reviews           Review[]
 
   @@index([tenantId])
   @@index([buyerId])
@@ -195,4 +208,185 @@ model CartItem {
   @@unique([sessionId, listingId])
   @@index([sessionId])
   @@index([tenantId])
+}
+
+// Categories for organizing listings
+model Category {
+  id          String     @id @default(cuid())
+  tenantId    String
+  name        String
+  slug        String
+  description String?
+  parentId    String?
+  imageUrl    String?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Category[] @relation("CategoryHierarchy")
+  listings    ListingCategory[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([isActive])
+}
+
+// Many-to-many relationship between Listings and Categories
+model ListingCategory {
+  id         String   @id @default(cuid())
+  listingId  String
+  categoryId String
+  createdAt  DateTime @default(now())
+
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, categoryId])
+  @@index([listingId])
+  @@index([categoryId])
+}
+
+// Reviews for listings
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Review {
+  id         String       @id @default(cuid())
+  tenantId   String
+  listingId  String
+  orderId    String?
+  userId     String
+  rating     Int // 1-5
+  title      String?
+  comment    String?
+  status     ReviewStatus @default(PENDING)
+  isVerified Boolean      @default(false) // verified purchase
+  helpfulCount Int        @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  listing    Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  order      Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([listingId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Favorites/Wishlist
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  tenantId  String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([listingId])
+}
+
+// Activity logs for audit trail
+enum ActivityType {
+  USER_REGISTERED
+  USER_LOGGED_IN
+  SHOP_CREATED
+  SHOP_UPDATED
+  SHOP_STATUS_CHANGED
+  LISTING_CREATED
+  LISTING_UPDATED
+  LISTING_STATUS_CHANGED
+  ORDER_CREATED
+  ORDER_STATUS_CHANGED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  REVIEW_CREATED
+  REVIEW_MODERATED
+}
+
+model ActivityLog {
+  id          String       @id @default(cuid())
+  tenantId    String
+  userId      String?
+  activityType ActivityType
+  entityType  String // 'shop', 'listing', 'order', etc.
+  entityId    String
+  metadata    Json? // additional context
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime     @default(now())
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([activityType])
+  @@index([createdAt])
+}
+
+// Shop analytics/statistics
+model ShopStats {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  totalOrders     Int      @default(0)
+  totalRevenue    Int      @default(0) // in cents
+  totalListings   Int      @default(0)
+  activeListings  Int      @default(0)
+  averageRating   Float    @default(0)
+  totalReviews    Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+}
+
+// Promotional codes/coupons
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model Coupon {
+  id              String       @id @default(cuid())
+  tenantId        String
+  code            String
+  description     String?
+  discountType    DiscountType
+  discountValue   Int // percentage or cents
+  minPurchase     Int? // minimum purchase in cents
+  maxDiscount     Int? // maximum discount in cents
+  usageLimit      Int? // null = unlimited
+  usageCount      Int          @default(0)
+  validFrom       DateTime
+  validUntil      DateTime?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
 }
